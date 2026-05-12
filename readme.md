@@ -13,7 +13,9 @@
 - **Static Asset Fallback**: Automatically serves files from the `public/` folder if no JSON mock matches the path.
 - **Docker Ready**: Optimized multi-stage build (~15MB image).
 
-## Quick Start (Docker)
+## Deployment
+
+### Using Docker (Standalone)
 Run it directly with your ngrok authtoken:
 ```bash
 docker run -d \
@@ -24,6 +26,33 @@ docker run -d \
   --name gsongrok \
   ramosisw/gsongrok
 ```
+
+### Using Docker Compose (Recommended)
+1. Create a `.env` file from the example:
+   ```bash
+   cp .env.example .env
+   ```
+2. Fill in your `NGROK_AUTHTOKEN` and `NGROK_DOMAIN` in the `.env` file.
+3. Use the following `docker-compose.yml`:
+```yaml
+version: '3.8'
+services:
+  gsongrok:
+    image: ramosisw/gsongrok
+    container_name: gsongrok
+    volumes:
+      - ./data:/data
+    environment:
+      - APIKEY=${NGROK_AUTHTOKEN}
+      - HOST=${NGROK_DOMAIN}
+    ports:
+      - "8080:8080"
+    restart: always
+```
+4. Start the engine:
+   ```bash
+   docker-compose up -d
+   ```
 
 ## 🛠️ Configuration
 All routing is managed via `data/paths.json` or the Admin Dashboard at `http://localhost:8080/`.
