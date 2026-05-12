@@ -90,6 +90,25 @@ func loadPaths() error {
 		filePath = "data/paths.json"
 	}
 
+	// Ensure directory exists
+	dir := "data"
+	if filePath != "data/paths.json" {
+		// If custom path, we don't necessarily want to create the dir, 
+		// but let's be safe if it's the default.
+	} else {
+		if _, err := os.Stat(dir); os.IsNotExist(err) {
+			os.MkdirAll(dir, 0755)
+		}
+	}
+
+	// Check if file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		log.Printf("Creating default paths file at %s", filePath)
+		if err := os.WriteFile(filePath, defaultPaths, 0644); err != nil {
+			return err
+		}
+	}
+
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return err

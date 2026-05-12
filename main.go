@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -20,7 +21,15 @@ func main() {
 
 	// Mux setup
 	mux := http.NewServeMux()
-	fileServer := http.FileServer(http.Dir("public"))
+
+	// Hybrid FileServer: Check local "public" first, then fallback to embedded
+	var fileServer http.Handler
+	if _, err := os.Stat("public"); err == nil {
+		fileServer = http.FileServer(http.Dir("public"))
+	} else {
+		subFS, _ := fs.Sub(publicFS, "public")
+		fileServer = http.FileServer(http.FS(subFS))
+	}
 
 	// Dynamic handler (JSON mocks + Static fallback)
 	mux.HandleFunc("/", dynamicHandler(fileServer))
