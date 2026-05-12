@@ -12,10 +12,8 @@ import (
 	"time"
 )
 
-// Paths holds the mapping between URL paths and JSON objects
 type Paths map[string]interface{}
 
-// TrafficEvent represents a single HTTP request captured by the inspector
 type TrafficEvent struct {
 	ID         int64               `json:"id"`
 	Timestamp  string              `json:"timestamp"`
@@ -36,7 +34,6 @@ var (
 	maxTraffic = 50
 )
 
-// statusRecorder is a wrapper to capture the HTTP status code
 type statusRecorder struct {
 	http.ResponseWriter
 	status int
@@ -47,9 +44,7 @@ func (r *statusRecorder) WriteHeader(status int) {
 	r.ResponseWriter.WriteHeader(status)
 }
 
-// recordTraffic adds a new event with full details
 func recordTraffic(r *http.Request, status int, body string) {
-	// Ignore noisy paths
 	path := r.URL.Path
 	if path == "/" || 
 	   path == "/favicon.ico" || 
@@ -62,7 +57,6 @@ func recordTraffic(r *http.Request, status int, body string) {
 	trafficMu.Lock()
 	defer trafficMu.Unlock()
 
-	// Dump the request for the "Plain Request" view
 	dump, _ := httputil.DumpRequest(r, true)
 
 	event := TrafficEvent{
@@ -83,25 +77,19 @@ func recordTraffic(r *http.Request, status int, body string) {
 	}
 }
 
-// loadPaths reads the JSON configuration from data/paths.json
 func loadPaths() error {
 	filePath := os.Getenv("PATHS_JSON_PATH")
 	if filePath == "" {
 		filePath = "data/paths.json"
 	}
 
-	// Ensure directory exists
 	dir := "data"
-	if filePath != "data/paths.json" {
-		// If custom path, we don't necessarily want to create the dir, 
-		// but let's be safe if it's the default.
-	} else {
+	if filePath == "data/paths.json" {
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
 			os.MkdirAll(dir, 0755)
 		}
 	}
 
-	// Check if file exists
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		log.Printf("Creating default paths file at %s", filePath)
 		if err := os.WriteFile(filePath, defaultPaths, 0644); err != nil {
@@ -125,10 +113,8 @@ func loadPaths() error {
 	return nil
 }
 
-// dynamicHandler resolves request paths using paths.json or falls back to public folder
 func dynamicHandler(fileServer http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Read body and put it back for the handler
 		var bodyString string
 		if r.Body != nil {
 			bodyBytes, _ := io.ReadAll(r.Body)
@@ -162,8 +148,10 @@ func dynamicHandler(fileServer http.Handler) http.HandlerFunc {
 	}
 }
 
-// managementHandler handles GET and POST to /gsongrok.json
 func managementHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("ngrok-skip-browser-warning", "true")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
 	filePath := os.Getenv("PATHS_JSON_PATH")
 	if filePath == "" {
 		filePath = "data/paths.json"
@@ -207,10 +195,11 @@ func managementHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// trafficHandler returns the captured traffic events
 func trafficHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("ngrok-skip-browser-warning", "true")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	trafficMu.RLock()
 	defer trafficMu.RUnlock()
-	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(traffic)
 }

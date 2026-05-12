@@ -6,10 +6,56 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 )
 
+func init() {
+	loadEnv()
+}
+
+func loadEnv() {
+	if os.Getenv("APIKEY") != "" {
+		return
+	}
+
+	envFile := ".env"
+	if _, err := os.Stat(envFile); os.IsNotExist(err) {
+		log.Println(".env not found, initializing...")
+		if _, err := os.Stat(".env.example"); err == nil {
+			data, _ := os.ReadFile(".env.example")
+			os.WriteFile(envFile, data, 0644)
+			log.Println("Successfully created .env from .env.example")
+		} else {
+			defaultEnv := []byte("APIKEY=\nHOST=\nPORT=8080\n")
+			os.WriteFile(envFile, defaultEnv, 0644)
+			log.Println("Successfully created a fresh .env file")
+		}
+	}
+
+	content, err := os.ReadFile(envFile)
+	if err != nil {
+		return
+	}
+
+	lines := strings.Split(string(content), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) == 2 {
+			key := strings.TrimSpace(parts[0])
+			val := strings.TrimSpace(parts[1])
+			val = strings.Trim(val, `"'`)
+			if os.Getenv(key) == "" {
+				os.Setenv(key, val)
+			}
+		}
+	}
+}
+
 func main() {
-	// Initial load of paths
 	if err := loadPaths(); err != nil {
 		log.Printf("Warning: could not load initial paths: %v", err)
 	}
@@ -19,10 +65,9 @@ func main() {
 		port = "8080"
 	}
 
-	// Mux setup
-	mux := http.NewServeMux()
+	localMux := http.NewServeMux()
+	publicMux := http.NewServeMux()
 
-	// Hybrid FileServer: Check local "public" first, then fallback to embedded
 	var fileServer http.Handler
 	if _, err := os.Stat("public"); err == nil {
 		fileServer = http.FileServer(http.Dir("public"))
@@ -31,35 +76,28 @@ func main() {
 		fileServer = http.FileServer(http.FS(subFS))
 	}
 
-	// Dynamic handler (JSON mocks + Static fallback)
-	mux.HandleFunc("/", dynamicHandler(fileServer))
+	localMux.HandleFunc("/", dynamicHandler(fileServer))
+	publicMux.HandleFunc("/", dynamicHandler(http.HandlerFunc(http.NotFound)))
 
-	// Management API
-	mux.HandleFunc("/gsongrok.json", managementHandler)
-
-	// Traffic Inspector API
-	mux.HandleFunc("/gsongrok/traffic", trafficHandler)
-
-	// Health check endpoint
-	mux.HandleFunc("/gsongrok/health", func(w http.ResponseWriter, r *http.Request) {
+	localMux.HandleFunc("/gsongrok.json", managementHandler)
+	localMux.HandleFunc("/gsongrok/traffic", trafficHandler)
+	localMux.HandleFunc("/gsongrok/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})
-
-	// Engine Info endpoint
-	mux.HandleFunc("/gsongrok/info", func(w http.ResponseWriter, r *http.Request) {
+	localMux.HandleFunc("/gsongrok/info", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("ngrok-skip-browser-warning", "true")
 		infoMu.RLock()
 		defer infoMu.RUnlock()
-		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(currentInfo)
 	})
 
-	// Background Tunnel startup
-	startTunnel(mux)
+	startTunnel(publicMux)
 
-	// Local HTTP server
 	log.Printf("gsongrok engine starting on port %s...", port)
-	if err := http.ListenAndServe(":"+port, mux); err != nil {
+	log.Printf("Dashboard available at: http://localhost:%s", port)
+	if err := http.ListenAndServe(":"+port, localMux); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}
 }

@@ -9,8 +9,8 @@ services:
       - ./data:/data
     environment:
       - PORT=8080
-      - APIKEY=${NGROK_AUTHTOKEN}
-      - HOST=${NGROK_DOMAIN}
+      - APIKEY=${APIKEY}
+      - HOST=${HOST}
     ports:
       - "8080:8080"
     restart: always

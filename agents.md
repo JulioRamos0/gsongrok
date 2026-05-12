@@ -1,34 +1,30 @@
-## Gsongrok Engine Architecture
+## Gsongrok Engine Architecture v1.0.0
 
 ### Folder Structure
 ```
 gsongrok/
-├── data/             # Persistent data
-│   └── paths.json    # JSON route mappings
-├── main.go           # Entry point & Mux setup
-├── engine.go         # JSON logic, Traffic Inspector, & Handlers
+├── data/             # Persistent data (mocks)
+├── public/           # Frontend assets (Dashboard)
+├── main.go           # Entry point & Dual-Mux setup (Security Layer)
+├── engine.go         # JSON logic, Traffic Inspector, & Management Handlers
 ├── tunnel.go         # Ngrok SDK integration & Session management
-├── public/          # Frontend & Assets
-│   └── index.html   # Premium Dashboard (Preact SPA)
-├── Dockerfile       # Multi-stage optimized build
-└── docker-compose.yml # Orchestration
+├── embedded.go       # Asset embedding logic (Go 1.16+ embed)
+├── .env              # Local credentials (auto-generated)
+├── Dockerfile        # Multi-stage optimized build (~15MB)
+└── docker-compose.yml # Orchestration with env injection
 ```
 
-### Backend Implementation
-- **Modular Design**: Separated concerns into `engine` (logic) and `tunnel` (connectivity).
-- **Traffic Inspector**: Captures `TrafficEvent` objects in a circular buffer (last 50 requests).
-- **Resilient Tunneling**: Uses an explicit `ngrok.Connect` session. If the tunnel fails (e.g. domain taken), the server continues to run locally.
-- **Dynamic Reloading**: Reads `paths.json` from disk on every request to ensure zero-restart updates.
-- **Static Fallback**: If a path isn't in JSON, it checks the `public/` directory.
-
-### Frontend Dashboard
-- **Technology**: Preact + HTM (no build step, pure ESM).
-- **Inspector Tab**: Advanced view with Raw Request Dumps, Header lists, and an interactive **JsonView** component for body exploration.
-- **Config Tab**: Raw JSON editor with real-time validation and Toast feedback (replacing alerts).
-- **Responsive Status**: Monitors engine health and ngrok URL status via polling.
+### v1.0.0 Key Features
+- **Security Isolation**: Uses separate `localMux` (Full access) and `publicMux` (Mocks only). The ngrok tunnel never exposes the dashboard or traffic logs.
+- **Zero-Config CLI**: Automatically detects, creates, and loads `.env` files. Compatible with `go install`.
+- **Hybrid FileSystem**: Serves dashboard files from the local `public/` directory if present, otherwise falls back to the embedded version inside the binary.
+- **Embedded Tunneling**: Native Ngrok SDK integration (no external ngrok binary needed).
+- **Traffic Inspector**: Circular buffer (50 events) with raw dump, header inspection, and interactive JSON tree viewer.
+- **Dynamic Reloading**: Mocks are updated in real-time via the dashboard and reloaded on each request.
+- **Noise Filtering**: Automatically ignores system/browser requests (favicon, .well-known, etc.) in the inspector.
 
 ### Environment Variables
-- `APIKEY`: (Required for tunnel) Ngrok Authtoken.
-- `HOST`: (Optional) Custom ngrok domain.
-- `PATHS_JSON_PATH`: (Optional) Defaults to `/data/paths.json`.
-- `PORT`: (Optional) Internal port, defaults to `8080`.
+- `APIKEY`: Required for ngrok tunneling.
+- `HOST`: Optional custom ngrok domain.
+- `PORT`: Local server port (defaults to `8080`).
+- `PATHS_JSON_PATH`: Custom path for the mocks file.

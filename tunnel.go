@@ -11,11 +11,10 @@ import (
 	"golang.ngrok.com/ngrok/config"
 )
 
-// EngineInfo holds the current state of the gsongrok tunnel
 type EngineInfo struct {
 	NgrokURL string `json:"ngrok_url"`
 	Error    string `json:"error,omitempty"`
-	Status   string `json:"status"` // "offline", "online", "error", "starting"
+	Status   string `json:"status"`
 }
 
 var (
@@ -23,12 +22,11 @@ var (
 	infoMu      sync.RWMutex
 )
 
-// startTunnel establishes the ngrok connection using an explicit session
 func startTunnel(mux *http.ServeMux) {
 	apiKey := os.Getenv("APIKEY")
 	host := os.Getenv("HOST")
 
-	if apiKey == "" {
+	if apiKey == "" || apiKey == "your_authtoken_here" {
 		log.Printf("No APIKEY provided. Running in local-only mode.")
 		return
 	}
@@ -37,8 +35,7 @@ func startTunnel(mux *http.ServeMux) {
 
 	go func() {
 		ctx := context.Background()
-		
-		// 1. Establish the session
+
 		sess, err := ngrok.Connect(ctx, ngrok.WithAuthtoken(apiKey))
 		if err != nil {
 			log.Printf("ERROR: Failed to establish ngrok session: %v", err)
@@ -46,13 +43,11 @@ func startTunnel(mux *http.ServeMux) {
 			return
 		}
 
-		// 2. Prepare endpoint options
 		opts := []config.HTTPEndpointOption{}
-		if host != "" {
+		if host != "" && host != "your_domain.ngrok-free.app" {
 			opts = append(opts, config.WithDomain(host))
 		}
 
-		// 3. Start listening on the tunnel
 		tun, err := sess.Listen(ctx, config.HTTPEndpoint(opts...))
 		if err != nil {
 			log.Printf("ERROR: Failed to open ngrok tunnel: %v", err)
@@ -63,7 +58,6 @@ func startTunnel(mux *http.ServeMux) {
 		updateStatus("online", "", tun.URL())
 		log.Printf("SUCCESS: Tunnel is LIVE at %s", tun.URL())
 
-		// 4. Serve requests
 		if err := http.Serve(tun, mux); err != nil {
 			log.Printf("Tunnel server stopped: %v", err)
 			updateStatus("error", err.Error(), "")
