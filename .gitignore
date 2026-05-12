@@ -1,0 +1,16 @@
+# Environment Variables
+.env
+
+# Go binaries
+gsongrok
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Docker
+.docker/
+
+# Data (Optional: ignore if you want users to start with empty data)
+# data/paths.json
