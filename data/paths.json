@@ -1,0 +1,8 @@
+{
+  "/api/health": {
+    "message": "OK"
+  },
+  "/webhook/notify": {
+    "status": "OK"
+  }
+}

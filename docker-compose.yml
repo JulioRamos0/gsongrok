@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  gsongrok:
+    build: .
+    image: ramosisw/gsongrok
+    container_name: gsongrok
+    volumes:
+      - ./data:/data
+    environment:
+      - PORT=8080
+      - APIKEY=${NGROK_AUTHTOKEN}
+      - HOST=${NGROK_DOMAIN}
+    ports:
+      - "8080:8080"
+    restart: always
