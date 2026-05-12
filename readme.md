@@ -13,6 +13,23 @@
 - **Static Asset Fallback**: Automatically serves files from the `public/` folder if no JSON mock matches the path.
 - **Docker Ready**: Optimized multi-stage build (~15MB image).
 
+## 🚀 Installation
+
+### Using Go
+If you have Go installed (1.26+), you can install the binary directly:
+```bash
+go install github.com/JulioRamos0/gsongrok@latest
+```
+This will install the `gsongrok` binary into your `$GOPATH/bin` directory.
+
+### Manual Build
+```bash
+git clone https://github.com/JulioRamos0/gsongrok.git
+cd gsongrok
+go build -o gsongrok .
+./gsongrok
+```
+
 ## Deployment
 
 ### Using Docker (Standalone)

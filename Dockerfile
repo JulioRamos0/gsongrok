@@ -11,7 +11,7 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o gsongrok ./src
+RUN CGO_ENABLED=0 GOOS=linux go build -o gsongrok .
 
 # Final stage
 FROM alpine:latest

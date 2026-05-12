@@ -5,10 +5,9 @@
 gsongrok/
 ├── data/             # Persistent data
 │   └── paths.json    # JSON route mappings
-├── src/             # Backend (Go)
-│   ├── main.go      # Entry point & Mux setup
-│   ├── engine.go    # JSON logic, Traffic Inspector, & Handlers
-│   └── tunnel.go    # Ngrok SDK integration & Session management
+├── main.go           # Entry point & Mux setup
+├── engine.go         # JSON logic, Traffic Inspector, & Handlers
+├── tunnel.go         # Ngrok SDK integration & Session management
 ├── public/          # Frontend & Assets
 │   └── index.html   # Premium Dashboard (Preact SPA)
 ├── Dockerfile       # Multi-stage optimized build
